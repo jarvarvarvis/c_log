@@ -33,19 +33,27 @@ SOFTWARE.
 #include <string.h>
 #include <time.h>
 
-typedef enum {
-    C_LOG_SEVERITY_DEBUG   = 1,
-    C_LOG_SEVERITY_INFO    = 2,
-    C_LOG_SEVERITY_WARNING = 3,
-    C_LOG_SEVERITY_ERROR   = 4,
+#define C_LOG_OK                 0
+#define C_LOG_ERROR_INVALID_ARGS 1
+#define C_LOG_ERROR_FORMAT       2
+#define C_LOG_ERROR_FORMAT_TIME  3
+#define C_LOG_ERROR_ALLOCATION   4
 
-    C_LOG_SEVERITY_SHOW_NONE = 5,
+typedef enum {
+C_LOG_SEVERITY_DEBUG   = 1,
+C_LOG_SEVERITY_INFO    = 2,
+C_LOG_SEVERITY_WARNING = 3,
+C_LOG_SEVERITY_ERROR   = 4,
+
+C_LOG_SEVERITY_SHOW_NONE = 5,
 } CLogSeverity;
 
 #ifndef C_LOG_MIN_SEVERITY
 #define C_LOG_MIN_SEVERITY C_LOG_SEVERITY_DEBUG
 #endif
 
+
+#ifndef C_LOG_NO_ANSI
 
 #define C_LOG_ANSI_RESET       "\033[0m"
 
@@ -56,70 +64,91 @@ typedef enum {
 #define C_LOG_ANSI_BOLD_GREEN  "\033[92;1m"
 #define C_LOG_ANSI_BOLD_YELLOW "\033[93;1m"
 
+#else
 
-#ifndef C_LOG_DEFINITION
+#define C_LOG_ANSI_RESET
+
+#define C_LOG_ANSI_GREY
+
+#define C_LOG_ANSI_BOLD_WHITE
+#define C_LOG_ANSI_BOLD_RED
+#define C_LOG_ANSI_BOLD_GREEN
+#define C_LOG_ANSI_BOLD_YELLOW
+
+#endif
+
+
+#ifndef C_LOG_IMPLEMENTATION
 
 bool c_log_should_show_severity(CLogSeverity severity);
 int c_log(CLogSeverity severity, const char* format, ...);
 
 #else
 bool c_log_should_show_severity(CLogSeverity severity) {
-    return severity >= C_LOG_MIN_SEVERITY;
+return severity >= C_LOG_MIN_SEVERITY;
 }
 
 int c_log(CLogSeverity severity, const char* format, ...) {
-    // Should this severity level be shown?
-    if (!c_log_should_show_severity(severity)) {
-        return 0;
-    }
+// Don't call c_log with C_LOG_SEVERITY_SHOW_NONE or higher values
+if (severity >= C_LOG_SEVERITY_SHOW_NONE) {
+    return C_LOG_ERROR_INVALID_ARGS;
+}
 
-    assert(severity != C_LOG_SEVERITY_SHOW_NONE);
-    char temp[256];
+// Should this severity level be shown? (based on C_LOG_MIN_SEVERITY)
+if (!c_log_should_show_severity(severity)) {
+    return C_LOG_OK;
+}
 
-    // Format the message into a local buffer
-    va_list args;
+// Format the message into a local buffer
+char temp[256];
+
+va_list args;
+va_start(args, format);
+int length = vsnprintf(temp, sizeof(temp), format, args);
+va_end(args);
+
+// Encoding error
+if (length < 0) {
+    return C_LOG_ERROR_FORMAT;
+}
+
+bool reformat = false;
+char *message_str;
+if (length < sizeof(temp)) {
+    // The formatted message fit into the buffer
+    // -> Create a copy
+    message_str = strdup(temp);
+} else {
+    // Message was truncated
+    // -> Allocate a large enough buffer to fit the entire string
+    message_str = (char*) malloc(length + 1);
+    reformat = true;
+}
+
+// Allocation error
+if (!message_str) {
+    return C_LOG_ERROR_ALLOCATION;
+}
+
+if (reformat) {
+    // Format the message into the bigger buffer
     va_start(args, format);
-    int length = vsnprintf(temp, sizeof(temp), format, args);
+    length = vsnprintf(message_str, length + 1, format, args);
     va_end(args);
+}
 
-    if (length < 0) {
-        // Encoding error
-        return -1;
+// Get current time
+time_t timer = time(NULL);
+struct tm *time_info = localtime(&timer);
+
+char time_str[35];
+memset(time_str, 0, 35);
+
+    // Format time string
+    size_t ftime_result = strftime(time_str, 35, C_LOG_ANSI_GREY "%Y-%m-%d %H:%M:%S" C_LOG_ANSI_RESET, time_info);
+    if (ftime_result == 0) {
+        return C_LOG_ERROR_FORMAT_TIME;
     }
-
-    bool reformat = false;
-    char *message_str;
-    if (length < sizeof(temp)) {
-        // The formatted message fit into the buffer
-        // -> Create a copy
-        message_str = strdup(temp);
-    } else {
-        // Message was truncated
-        // -> Allocate a large enough buffer to fit the entire string
-        message_str = (char*) malloc(length + 1);
-        reformat = true;
-    }
-
-    if (!message_str) {
-        // Allocation error
-        return -1;
-    }
-
-    if (reformat) {
-        // Format the message again
-        va_start(args, format);
-        length = vsnprintf(message_str, length + 1, format, args);
-        va_end(args);
-    }
-
-    // Get current time
-    time_t timer = time(NULL);
-    struct tm *time_info = localtime(&timer);
-
-    char time_str[35];
-    memset(time_str, 0, 35);
-    strftime(time_str, 35, C_LOG_ANSI_GREY "%Y-%m-%d %H:%M:%S" C_LOG_ANSI_RESET,
-            time_info);
 
     // Show log message
     if (severity == C_LOG_SEVERITY_DEBUG) {

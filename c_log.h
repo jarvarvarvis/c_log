@@ -48,8 +48,15 @@ typedef enum {
     C_LOG_SEVERITY_SHOW_NONE = 5,
 } CLogSeverity;
 
+// The minimum severity that is logged to the console
 #ifndef C_LOG_MIN_SEVERITY
 #define C_LOG_MIN_SEVERITY C_LOG_SEVERITY_DEBUG
+#endif
+
+// The amount of bytes/chars allocated to the initial buffer into which the message is formatted
+// This buffer is allocated on the stack.
+#ifndef C_LOG_FORMAT_BUFFER_PREALLOC_BYTES
+#define C_LOG_FORMAT_BUFFER_PREALLOC_BYTES 512
 #endif
 
 
@@ -84,6 +91,7 @@ bool c_log_should_show_severity(CLogSeverity severity);
 int c_log(CLogSeverity severity, const char* format, ...);
 
 #else
+
 bool c_log_should_show_severity(CLogSeverity severity) {
     return severity >= C_LOG_MIN_SEVERITY;
 }
@@ -100,7 +108,7 @@ int c_log(CLogSeverity severity, const char* format, ...) {
     }
 
     // Format the message into a local buffer
-    char temp[256];
+    char temp[C_LOG_FORMAT_BUFFER_PREALLOC_BYTES];
 
     va_list args;
     va_start(args, format);
@@ -113,13 +121,9 @@ int c_log(CLogSeverity severity, const char* format, ...) {
     }
 
     bool reformat = false;
-    char *message_str;
-    if (length < sizeof(temp)) {
-        // The formatted message fit into the buffer
-        // -> Create a copy
-        message_str = strdup(temp);
-    } else {
-        // Message was truncated
+    char *message_str = temp;
+    if (length >= sizeof(temp)) {
+        // Message was truncated because it didn't fit into the buffer
         // -> Allocate a large enough buffer to fit the entire string
         message_str = (char*) malloc(length + 1);
         reformat = true;
@@ -141,11 +145,11 @@ int c_log(CLogSeverity severity, const char* format, ...) {
     time_t timer = time(NULL);
     struct tm *time_info = localtime(&timer);
 
-    char time_str[35];
-    memset(time_str, 0, 35);
+    char time_str[40];
+    memset(time_str, 0, 40);
 
     // Format time string
-    size_t ftime_result = strftime(time_str, 35, C_LOG_ANSI_GREY "%Y-%m-%d %H:%M:%S" C_LOG_ANSI_RESET, time_info);
+    size_t ftime_result = strftime(time_str, 40, C_LOG_ANSI_GREY "%Y-%m-%d %H:%M:%S" C_LOG_ANSI_RESET, time_info);
     if (ftime_result == 0) {
         return C_LOG_ERROR_FORMAT_TIME;
     }
@@ -171,7 +175,11 @@ int c_log(CLogSeverity severity, const char* format, ...) {
         printf("%s  [%s] %s\n", time_str, severity_str, message_str);
     }
 
-    free(message_str);
+    // If the message was reformatted, free the allocated memory
+    if (reformat) {
+        free(message_str);
+    }
+
     return length;
 }
 

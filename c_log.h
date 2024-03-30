@@ -85,64 +85,64 @@ int c_log(CLogSeverity severity, const char* format, ...);
 
 #else
 bool c_log_should_show_severity(CLogSeverity severity) {
-return severity >= C_LOG_MIN_SEVERITY;
+    return severity >= C_LOG_MIN_SEVERITY;
 }
 
 int c_log(CLogSeverity severity, const char* format, ...) {
-// Don't call c_log with C_LOG_SEVERITY_SHOW_NONE or higher values
-if (severity >= C_LOG_SEVERITY_SHOW_NONE) {
-    return C_LOG_ERROR_INVALID_ARGS;
-}
+    // Don't call c_log with C_LOG_SEVERITY_SHOW_NONE or higher values
+    if (severity >= C_LOG_SEVERITY_SHOW_NONE) {
+        return C_LOG_ERROR_INVALID_ARGS;
+    }
 
-// Should this severity level be shown? (based on C_LOG_MIN_SEVERITY)
-if (!c_log_should_show_severity(severity)) {
-    return C_LOG_OK;
-}
+    // Should this severity level be shown? (based on C_LOG_MIN_SEVERITY)
+    if (!c_log_should_show_severity(severity)) {
+        return C_LOG_OK;
+    }
 
-// Format the message into a local buffer
-char temp[256];
+    // Format the message into a local buffer
+    char temp[256];
 
-va_list args;
-va_start(args, format);
-int length = vsnprintf(temp, sizeof(temp), format, args);
-va_end(args);
-
-// Encoding error
-if (length < 0) {
-    return C_LOG_ERROR_FORMAT;
-}
-
-bool reformat = false;
-char *message_str;
-if (length < sizeof(temp)) {
-    // The formatted message fit into the buffer
-    // -> Create a copy
-    message_str = strdup(temp);
-} else {
-    // Message was truncated
-    // -> Allocate a large enough buffer to fit the entire string
-    message_str = (char*) malloc(length + 1);
-    reformat = true;
-}
-
-// Allocation error
-if (!message_str) {
-    return C_LOG_ERROR_ALLOCATION;
-}
-
-if (reformat) {
-    // Format the message into the bigger buffer
+    va_list args;
     va_start(args, format);
-    length = vsnprintf(message_str, length + 1, format, args);
+    int length = vsnprintf(temp, sizeof(temp), format, args);
     va_end(args);
-}
 
-// Get current time
-time_t timer = time(NULL);
-struct tm *time_info = localtime(&timer);
+    // Encoding error
+    if (length < 0) {
+        return C_LOG_ERROR_FORMAT;
+    }
 
-char time_str[35];
-memset(time_str, 0, 35);
+    bool reformat = false;
+    char *message_str;
+    if (length < sizeof(temp)) {
+        // The formatted message fit into the buffer
+        // -> Create a copy
+        message_str = strdup(temp);
+    } else {
+        // Message was truncated
+        // -> Allocate a large enough buffer to fit the entire string
+        message_str = (char*) malloc(length + 1);
+        reformat = true;
+    }
+
+    // Allocation error
+    if (!message_str) {
+        return C_LOG_ERROR_ALLOCATION;
+    }
+
+    if (reformat) {
+        // Format the message into the bigger buffer
+        va_start(args, format);
+        length = vsnprintf(message_str, length + 1, format, args);
+        va_end(args);
+    }
+
+    // Get current time
+    time_t timer = time(NULL);
+    struct tm *time_info = localtime(&timer);
+
+    char time_str[35];
+    memset(time_str, 0, 35);
 
     // Format time string
     size_t ftime_result = strftime(time_str, 35, C_LOG_ANSI_GREY "%Y-%m-%d %H:%M:%S" C_LOG_ANSI_RESET, time_info);

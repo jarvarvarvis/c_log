@@ -1,6 +1,6 @@
 # c_log
 
-Logging framework for the C programming language
+Small header-only logging library for the C programming language
 
 ## Basic setup
 
@@ -44,9 +44,11 @@ If you want to disable them (e.g. because your terminal does not support them), 
 
 ## Memory allocation
 
-Using the `C_LOG_FORMAT_BUFFER_PREALLOC_BYTES` macro, you can set the size of the initial, stack-allocated buffer into which the log message is formatted.
+Using the `C_LOG_FORMAT_BUFFER_STACK_BYTES` macro, you can set the size of the initial, stack-allocated buffer into which the log message is formatted.
 Setting this to a higher value (based on the length of your log messages) can avoid a heap allocation and an additional call to `vsnprintf`.
 
 ## General Message format
 
-`<Date and time>  [<Severity>] <Message>`
+```
+<Date and time>  [<Severity>] <Message>
+```

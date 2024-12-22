@@ -122,7 +122,7 @@ int c_log(const CLogSeverity severity, const char* format, ...) {
 
     bool reformat = false;
     char *message_str = temp;
-    if (length >= sizeof(temp)) {
+    if ((unsigned int)length >= sizeof(temp)) {
         // Message was truncated because it didn't fit into the buffer
         // -> Allocate a large enough buffer to fit the entire string
         message_str = (char*) malloc(length + 1);

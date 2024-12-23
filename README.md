@@ -22,8 +22,9 @@ The 4 log severities taken as arguments by `c_log` are as follows:
 - `C_LOG_SEVERITY_INFO`
 - `C_LOG_SEVERITY_WARNING`
 - `C_LOG_SEVERITY_ERROR`
+- `C_LOG_SEVERITY_FATAL`
 
-`C_LOG_SEVERITY_DEBUG` is the lowest log level, `C_LOG_SEVERITY_ERROR` is the highest.
+`C_LOG_SEVERITY_DEBUG` is the lowest log level, `C_LOG_SEVERITY_FATAL` is the highest.
 
 To specify the minimum level to be displayed, you can use the `C_LOG_MIN_SEVERITY` macro (by default, it's set to `C_LOG_SEVERITY_DEBUG`, so every log level is shown).
 
@@ -50,5 +51,5 @@ Setting this to a higher value (based on the length of your log messages) can av
 ## General Message format
 
 ```
-<Date and time>  [<Severity>] <Message>
+<Date and time>  <Severity>  <Message>
 ```

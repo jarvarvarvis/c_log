@@ -179,10 +179,8 @@ int c_log(const CLogSeverity severity, const char* format, ...) {
     }
 
     // Show log message
-    if (severity < C_LOG_SEVERITY_SHOW_NONE) {
-        const char *severity_str = c_log_get_severity_str(severity);
-        printf("%s  %s  %s\n", time_str, severity_str, message_str);
-    }
+    const char *severity_str = c_log_get_severity_str(severity);
+    printf("%s  %s  %s\n", time_str, severity_str, message_str);
 
     // If the message was reformatted, free the allocated memory
     if (reformat) {

@@ -44,8 +44,9 @@ typedef enum {
     C_LOG_SEVERITY_INFO    = 2,
     C_LOG_SEVERITY_WARNING = 3,
     C_LOG_SEVERITY_ERROR   = 4,
+    C_LOG_SEVERITY_FATAL   = 5,
 
-    C_LOG_SEVERITY_SHOW_NONE = 5,
+    C_LOG_SEVERITY_SHOW_NONE = 6,
 } CLogSeverity;
 
 // The minimum severity that is logged to the console
@@ -62,14 +63,17 @@ typedef enum {
 
 #ifndef C_LOG_NO_ANSI
 
-#define C_LOG_ANSI_RESET       "\033[0m"
+#define C_LOG_ANSI_RESET           "\033[0m"
 
-#define C_LOG_ANSI_GREY        "\033[90m"
+#define C_LOG_ANSI_GREY            "\033[90m"
 
-#define C_LOG_ANSI_BOLD_WHITE  "\033[97;1m"
-#define C_LOG_ANSI_BOLD_RED    "\033[91;1m"
-#define C_LOG_ANSI_BOLD_GREEN  "\033[92;1m"
-#define C_LOG_ANSI_BOLD_YELLOW "\033[93;1m"
+#define C_LOG_ANSI_BOLD_BLACK      "\033[30;1m"
+#define C_LOG_ANSI_BOLD_WHITE      "\033[37;1m"
+#define C_LOG_ANSI_BOLD_RED        "\033[31;1m"
+#define C_LOG_ANSI_BOLD_GREEN      "\033[32;1m"
+#define C_LOG_ANSI_BOLD_YELLOW     "\033[33;1m"
+
+#define C_LOG_ANSI_BACKGROUND_RED  "\033[41m"
 
 #else
 
@@ -81,6 +85,8 @@ typedef enum {
 #define C_LOG_ANSI_BOLD_RED
 #define C_LOG_ANSI_BOLD_GREEN
 #define C_LOG_ANSI_BOLD_YELLOW
+
+#define C_LOG_ANSI_BACKGROUND_RED
 
 #endif
 
@@ -94,6 +100,21 @@ int c_log(CLogSeverity severity, const char* format, ...);
 
 bool c_log_should_show_severity(const CLogSeverity severity) {
     return severity >= C_LOG_MIN_SEVERITY;
+}
+
+const char *c_log_get_severity_str(const CLogSeverity severity) {
+    switch (severity) {
+        case C_LOG_SEVERITY_DEBUG:
+            return C_LOG_ANSI_BOLD_GREEN                           "debug" C_LOG_ANSI_RESET;
+        case C_LOG_SEVERITY_INFO:
+            return C_LOG_ANSI_BOLD_WHITE                           "info " C_LOG_ANSI_RESET;
+        case C_LOG_SEVERITY_WARNING:
+            return C_LOG_ANSI_BOLD_YELLOW                          "warn " C_LOG_ANSI_RESET;
+        case C_LOG_SEVERITY_ERROR:
+            return C_LOG_ANSI_BOLD_RED                             "error" C_LOG_ANSI_RESET;
+        case C_LOG_SEVERITY_FATAL:
+            return C_LOG_ANSI_BACKGROUND_RED C_LOG_ANSI_BOLD_BLACK "fatal" C_LOG_ANSI_RESET;
+    }
 }
 
 int c_log(const CLogSeverity severity, const char* format, ...) {
@@ -154,24 +175,9 @@ int c_log(const CLogSeverity severity, const char* format, ...) {
     }
 
     // Show log message
-    if (severity == C_LOG_SEVERITY_DEBUG) {
-        const char *severity_str = C_LOG_ANSI_BOLD_GREEN "debug" C_LOG_ANSI_RESET;
-        printf("%s  [%s] %s\n", time_str, severity_str, message_str);
-    }
-
-    else if (severity == C_LOG_SEVERITY_INFO) {
-        const char *severity_str = C_LOG_ANSI_BOLD_WHITE "info" C_LOG_ANSI_RESET;
-        printf("%s  [%s] %s\n", time_str, severity_str, message_str);
-    }
-
-    else if (severity == C_LOG_SEVERITY_WARNING) {
-        const char *severity_str = C_LOG_ANSI_BOLD_YELLOW "warning" C_LOG_ANSI_RESET;
-        printf("%s  [%s] %s\n", time_str, severity_str, message_str);
-    }
-
-    else if (severity == C_LOG_SEVERITY_ERROR) {
-        const char *severity_str = C_LOG_ANSI_BOLD_RED "error" C_LOG_ANSI_RESET;
-        printf("%s  [%s] %s\n", time_str, severity_str, message_str);
+    if (severity < C_LOG_SEVERITY_SHOW_NONE) {
+        const char *severity_str = c_log_get_severity_str(severity);
+        printf("%s  %s  %s\n", time_str, severity_str, message_str);
     }
 
     // If the message was reformatted, free the allocated memory

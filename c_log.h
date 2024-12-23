@@ -94,6 +94,7 @@ typedef enum {
 #ifndef C_LOG_IMPLEMENTATION
 
 bool c_log_should_show_severity(CLogSeverity severity);
+const char *c_log_get_severity_str(const CLogSeverity severity);
 int c_log(CLogSeverity severity, const char* format, ...);
 
 #else
@@ -114,6 +115,9 @@ const char *c_log_get_severity_str(const CLogSeverity severity) {
             return C_LOG_ANSI_BOLD_RED                             "error" C_LOG_ANSI_RESET;
         case C_LOG_SEVERITY_FATAL:
             return C_LOG_ANSI_BACKGROUND_RED C_LOG_ANSI_BOLD_BLACK "fatal" C_LOG_ANSI_RESET;
+
+        default:
+            return "";
     }
 }
 
